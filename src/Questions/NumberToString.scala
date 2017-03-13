@@ -8,7 +8,7 @@ package Questions
   */
 object NumberToString {
   def main(args: Array[String]): Unit = {
-    printStringFromInt(123.toString, "")
+    printStringFromInt(12.toString, "")
 //    printStringFromInt(2345.toString, "")
   }
 
