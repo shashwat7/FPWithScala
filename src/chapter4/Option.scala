@@ -68,15 +68,15 @@ object Option{
   }
 
   // 4.5
-  def traverse[A, B](a: List[A])(fS: A => Option[B]): Option[List[B]] = {
-    a match{
-      case Nil => Some(Nil)
-      case h :: t => f(h).flatMap{v => traverse(t)(f).map{r => v :: r}}
-    }
-  }
-  def sequence_3[A](a: List[Option[A]]): Option[List[A]] = {
-    traverse(a){a => a}
-  }
+//  def traverse[A, B](a: List[A])(fS: A => Option[B]): Option[List[B]] = {
+//    a match{
+//      case Nil => Some(Nil)
+//      case h :: t => f(h).flatMap{v => traverse(t)(f).map{r => v :: r}}
+//    }
+//  }
+//  def sequence_3[A](a: List[Option[A]]): Option[List[A]] = {
+////    traverse(a){a => a}
+//  }
 
 
 
