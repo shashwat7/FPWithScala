@@ -6,7 +6,7 @@ import scala.annotation.tailrec
   * Created by shashwat on 2/2/17.
   */
 
-sealed trait List[+A] // + indicates the the type parameter A is co-variant
+trait List[+A] // + indicates the the type parameter A is co-variant
 
 case object Nil extends List[Nothing]
 
