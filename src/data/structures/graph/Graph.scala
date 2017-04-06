@@ -7,7 +7,7 @@ import scala.collection.mutable
   */
 
 case class Graph(numOfVertices: Int, edges: Edges){
-  def addEdge(src: Int, dest: Int): Unit = edges.addEdge(src,dest)
+  def addEdge(src: Int, dest: Int, weight: Double = 1.0): Unit = edges.addEdge(src,dest, weight)
 }
 
 object Graph{
@@ -106,12 +106,109 @@ object Graph{
     }
   }
 
+  /**
+    * Find shortest path between src vertex and dest vertex in Graph g.
+    * Assume g, does not have any negative.
+    * */
+  def shortestPath(src: Int, dest: Int, g: Graph): Double = {
+    val distance: Array[Double] = Array.fill(g.numOfVertices)(Double.MinPositiveValue)
+    val parent: mutable.Map[Int, Int] = mutable.Map.empty[Int, Int]
+    val q: mutable.Queue[Int] = mutable.Queue.empty[Int]
+    distance(src) = 0
+    parent.put(src,Integer.MIN_VALUE) //dummy value
+    q.enqueue(src)
+    while(q.nonEmpty){
+      val curr = q.dequeue()
+      //println("visiting : " + curr + ". disctance: " + distance(curr))
+      g.edges.allVerticesFrom(curr).foreach{c =>
+        //println("next  : " + c + ", distance before correction: " + distance(c))
+        if(distance(c) == Double.MinPositiveValue || distance(c) > distance(curr) + g.edges.getWeight(curr,c)){
+          distance(c) = distance(curr) + g.edges.getWeight(curr,c)
+          parent.put(c,curr)
+          q.enqueue(c)
+        }
+      }
+    }
+    // Print
+    val stk = new mutable.Stack[Int]
+    var p = parent.get(dest)
+    while(p.isDefined && p.get != src) {stk.push(p.get); p = parent.get(p.get)}
+    print(src + "->")
+    while(stk.nonEmpty){print(stk.pop() + "->")}
+    print(dest)
+    println("\nDistance: " + distance(dest))
+    distance(dest)
+  }
+
+
+  def dijkstra(g: Graph, start: Int) = {
+    val distance = Array.fill[Double](g.numOfVertices)(Double.MaxValue) // array used as a queue.
+    val completed = mutable.HashMap.empty[Int, Double] // Stores indexes of vertices already completed
+    distance(start) = 0
+    completed.put(start,0)
+    println(getMinimum)
+    while(getMinimum._1 != -1){ // while the queue is non-empty
+    val (currIdx,currDist) = getMinimum
+      distance(currIdx) = Double.NaN // Remove from distance queue
+      if(currDist != Double.NaN){
+        println("On: " + currIdx + ". Distance: " + currDist)
+        completed.put(currIdx,currDist)
+        g.edges.allVerticesFrom(currIdx).foreach{ c =>
+          if(distance(c) >= currDist + g.edges.getWeight(currIdx,c))
+            distance(c) = currDist + g.edges.getWeight(currIdx,c)
+        }
+      }
+    }
+
+    def getMinimum: (Int, Double) = {
+      var minDist = Double.MaxValue
+      var minIdx = -1
+      (0 until g.numOfVertices).zip(distance).foreach{ case (curIdx, currDist) =>
+        if(currDist!= Double.NaN && currDist<=minDist){minDist = currDist; minIdx = curIdx}
+      }
+      (minIdx, minDist)
+    }
+  }
+
+
+  def bellmanFord(g: Graph, start: Int) = {
+    val distance: Array[Double] = Array.fill[Double](g.numOfVertices)(Double.MaxValue)
+    val parent: mutable.Map[Int, Int] = mutable.Map.empty[Int, Int]
+    distance(start) = 0
+    // Set each edge
+    for(i<- 0 until g.numOfVertices){
+      for((u,v) <- g.edges.getAllEdges){
+        relax(u,v)
+      }
+    }
+    // Check for cycles
+    for((u,v) <- g.edges.getAllEdges){
+      if(distance(v) > distance(u) + g.edges.getWeight(u,v)){
+        distance(v) = Double.NaN
+        println("Negative cycle exists! It passes through vertex - " + v)
+      } else
+        println(s"Shortest Path from $start to vertex $v is: " + distance(v))
+    }
+    // Print
+
+    def relax(u: Int, v: Int) = {
+      val w = g.edges.getWeight(u,v)
+      if(distance(v) > distance(u) + w){
+        distance(v) = distance(u) + w
+        parent.put(v,u)
+      }
+    }
+
+  }
 
 
 
   def apply(numOfVertices: Int): Graph = {
     new Graph(numOfVertices, AdjacencyList(numOfVertices))
   }
+
+  def createWeightedGraph(numOfVertices: Int): Graph =
+    new Graph(numOfVertices, WeightedAdjacenyList(numOfVertices))
 
 }
 
