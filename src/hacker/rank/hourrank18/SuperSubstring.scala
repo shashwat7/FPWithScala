@@ -43,16 +43,7 @@ object SuperSubstring {
     println(answer)
   }
 
-  def editorialSolution(s: String): Int = {
-
-    def numberOfEvenSubstringsStartingAtIAndMod3M(i: Int, m: Int): Int = {
-      if(i == s.length) 0
-      else {
-        val c = s(i)
-        numberOfEvenSubstringsStartingAtIAndMod3M(i+1, m+c%3)
-      }
-    }
-  }
+  def editorialSolution(s: String): Int = ???
 
 
 
