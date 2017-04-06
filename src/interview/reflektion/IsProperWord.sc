@@ -10,7 +10,7 @@ def isWord(word: String): Boolean = {
     var mid = 1
     var found: Boolean = false
 
-    while(mid <= right && found == false) {
+    while(mid <= right && !found) {
 //      println("Substring Check: " + word.substring(left, mid))
       if(
         dictionary.contains(word.substring(left, mid)) &&
