@@ -11,6 +11,10 @@ e
 b
 f
 c
+
+target complexity:
+Space: O(n)
+Time: O(c)
 */
 
 val arr = Array("abcd", "d", "efg")
