@@ -5,7 +5,7 @@ import scala.collection.mutable
 /**
   * Created by shashwat on 15/4/17.
   * Statement is the parent trait for a Propositional Statement.
-  * Statements are made from further sub-statements, connected via Operators.
+  * Statements are made from further sub-statements(ComplexStatements), connected via Operators.
   * Their smallest form being
   * Variables - a,b,c...z ; !a,!b,!c...!z
   * Constants - 0 and 1
@@ -21,6 +21,7 @@ sealed trait Statement{
   * a,b,c...z OR !a,!b,!c...!z
   * */
 case class Variable(name: Char, negated: Boolean = false) extends Statement {
+
   def |(that: Statement): Statement = that match{
     case x: Constant => x | this // 1 | a = 1, 0 | a = a
     case y: Variable if y.equals(this) => this // a | a = a
@@ -68,32 +69,76 @@ case object Zero extends Constant{
   * They are saved as a Tree where root is an Operator.
   * */
 case class ComplexStatement(root: Operator) extends Statement{
+
   def |(that: Statement): Statement = that match{
     case y: Constant => y | this // 1 | (a & b) = 1, 0 | (a & b) = (a & b)
     case y: ComplexStatement if y.equals(this) => this // (a & b) | (a & b) = (a & b)
     case y: ComplexStatement if y.equals(! this) => One // (a & b) | !(a & b) = One
     case y: Statement => ComplexStatement( new |(this, y) ) // (a & b) | (b & c)
   }
+
   def &(that: Statement): Statement = that match{
     case y: Constant => y & this // 1 & (a & b) = 1, 0 & (a & b) = (a & b)
     case y: ComplexStatement if y.equals(this) => this // (a & b) & (a & b) = (a & b)
     case y: ComplexStatement if y.equals(! this) => Zero // (a & b) & !(a & b) = Zero
     case y: Statement => ComplexStatement( new &(this, y) ) // (a & b) | (b & c)
   }
+
   def unary_! :Statement = ComplexStatement( new !(this) )
+
+  override def toString: String = root match{
+    case &(op1,op2) => "(" + op1.toString + " & " + op2.toString + ")"
+    case |(op1,op2) => "(" + op1.toString + " | " + op2.toString + ")"
+    case !(op1) => "!(" + op1.toString + ")"
+  }
 }
 
 object Statement{
   val ONE: Statement = One
   val ZERO: Statement = Zero
-  def variable(c: Char, n: Boolean): Statement = Variable(c,n)
+
+  /**
+    * Solve will reduce the statement to it's simplest form.
+    * Example:
+    * (a | !a) ==> 1
+    * (a | b) & (a | !a) ==> (a | b)
+    * @param stmt is the statement to be solved
+    * @return solved statement
+    * */
   def solve(stmt: Statement): Statement = stmt match{
     case c: Constant => c
     case v: Variable => v
-    case complex: ComplexStatement => solve(complex.root.operate)
+    case complex: ComplexStatement =>
+      complex.root match{
+        case &(op1,op2) =>
+          val solvedLeftOperator = solve(op1)
+          val solvedRightOperator = solve(op2)
+          solvedLeftOperator & solvedRightOperator
+        case |(op1,op2) =>
+          val solvedLeftOperator = solve(op1)
+          val solvedRightOperator = solve(op2)
+          solvedLeftOperator | solvedRightOperator
+        case !(op1) =>
+          val solvedOperator = solve(op1)
+          solvedOperator.unary_!
+      }
   }
+
+  /***
+    * Checks whether stmt is a tautology or not.
+    * @param stmt statement to be checked
+    * @return true if it is a tautology else false
+    */
   def isTautology(stmt: Statement): Boolean = solve(stmt).equals(ONE)
 
+  /**
+    * This function parses a given string to a Statement.
+    * Assumptions:
+    * 1. Parsing assumes that all input values are correct propositional statement.
+    * 2. In case you are using any binary operator, please enclose it within brackets, otherwise it will throw String index out of bound!
+    * @param input String to be parsed.
+    * @return A propositional Statement.
+    * */
   def apply(input: String): Statement = {
     def isVariable(s: Char): Boolean = s.toLower >= 'a' && s.toLower <= 'z'
     def isOne(s: Char): Boolean = s == '1'
@@ -104,31 +149,41 @@ object Statement{
     def isClosingBracket(s: Char): Boolean = s == ')'
     val stackPreparedStatements = new mutable.Stack[Any]()
     //  ((a & (!b | b)) | (!a & (!b | b)))
-    //  ((a & (!b | b)) | (!a & (!b | b)))
-    input.zipWithIndex.foreach{ case (c,idx) =>
-      if(isOpeningBracket(c)) stackPreparedStatements.push(c)
-      if(isOne(c)) stackPreparedStatements.push(ONE)
-      if(isZero(c)) stackPreparedStatements.push(ZERO)
-      if(isVariable(c)) stackPreparedStatements.push(Variable(c))
-
-
-
-
-      if(isClosingBracket(c)){
-        var top: Char = stack.pop()
-        var preparedStatement: Statement = _
-        do{
-          preparedStatement = top match{
-            case c if isOne(c) => ONE
-            case c if isZero(c) => ZERO
-            case c if isVariable(c)=> Variable(c)
-            case c if isUnaryOperator(c) => ComplexStatement( new !(preparedStatement) )
-            case c if isBinaryOperator(c) =>
-              val op1 = stack.pop() // This could be ) , a/b/c ,
+    var idx = 0
+    while(idx < input.length){
+      val c = input.charAt(idx)
+      if(c != ' '){
+        if(isOpeningBracket(c)) stackPreparedStatements.push(c)
+        else if(isOne(c)) stackPreparedStatements.push(ONE)
+        else if(isZero(c)) stackPreparedStatements.push(ZERO)
+        else if(isVariable(c)) stackPreparedStatements.push(Variable(c))
+        else if(isUnaryOperator(c)){
+          val nextChar = input.charAt(idx+1)
+          if(isVariable(nextChar)) {stackPreparedStatements.push(Variable(nextChar,negated = true)); idx = idx + 1}
+          else if(isOpeningBracket(nextChar)){
+            var j = idx + 2
+            while(!isClosingBracket(input.charAt(j))) j = j + 1
+            stackPreparedStatements.push(ComplexStatement(new !(Statement(input.substring(idx + 1, j+1)))))
+            idx = j + 1
           }
-        } while (!isOpeningBracket(top))
+        }
+        else if(isBinaryOperator(c)){
+          val opr1 = stackPreparedStatements.pop().asInstanceOf[Statement]
+          var j = idx + 1
+          while(!isClosingBracket(input.charAt(j))) j = j + 1
+          val opr2 = Statement(input.substring(idx+1, j+1))
+          if(c == '&') stackPreparedStatements.push(ComplexStatement(&(opr1,opr2)))
+          else if(c == '|') stackPreparedStatements.push(ComplexStatement(|(opr1,opr2)))
+          idx = j+1
+        }
+        else if(isClosingBracket(c)){
+          val stmt = stackPreparedStatements.pop().asInstanceOf[Statement]
+          if(stackPreparedStatements.nonEmpty) stackPreparedStatements.pop() // remove opening brackets
+          stackPreparedStatements.push(stmt)
+        }
       }
-      if(c != ' ') stack.push(c)
+      idx = idx + 1
     }
+    stackPreparedStatements.pop().asInstanceOf[Statement]
   }
 }

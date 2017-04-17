@@ -2,6 +2,8 @@ package interview.indix.tautologyverifier
 
 /**
   * Created by shashwat on 15/4/17.
+  * Operator is the parent trait for all operators.
+  * It operates on one or more statements. And, the operation is executed by calling operate on the Operator.
   */
 sealed trait Operator{
   def operate: Statement
